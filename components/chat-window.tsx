@@ -110,15 +110,15 @@ export function ChatWindow() {
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col">
         {/* Header */}
-        <div className="border-b border-cyan-700/30 bg-slate-900/30 backdrop-blur px-6 py-4">
+        <div className="border-b border-slate-700 bg-slate-900 px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-gradient-to-r from-cyan-600 to-blue-600 text-white">
+              <div className="p-2 rounded-lg bg-slate-800 text-slate-300">
                 <Zap className="w-5 h-5" />
               </div>
               <div>
-                <h1 className="adam-title text-2xl">TRUE ADAM</h1>
-                <p className="adam-subtitle">AI Operating System • Claude 3.5</p>
+                <h1 className="adam-title">TRUE ADAM</h1>
+                <p className="adam-subtitle">AI OS • Free APIs</p>
               </div>
             </div>
             <button
@@ -135,23 +135,23 @@ export function ChatWindow() {
           {messages.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-center">
               <div className="space-y-4">
-                <div className="inline-block p-4 rounded-full bg-gradient-to-r from-cyan-600/20 to-blue-600/20 border border-cyan-600/30">
-                  <Zap className="w-12 h-12 text-cyan-400" />
+                <div className="inline-block p-3 rounded-lg bg-slate-800 text-slate-400">
+                  <Zap className="w-10 h-10" />
                 </div>
-                <h2 className="adam-title text-3xl">Ready to lock in?</h2>
-                <p className="text-slate-400 max-w-md mx-auto">
-                  Ask me anything. Research topics, write code, brainstorm ideas, or just chat. I've got persistent memory so I remember our conversations.
+                <h2 className="text-3xl font-bold text-slate-100">Start chatting</h2>
+                <p className="text-slate-500 max-w-md mx-auto">
+                  Powered by Groq, Cerebras, and other free APIs. No limits, no bills.
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-6 max-w-md mx-auto">
                   {[
-                    'Research a topic',
-                    'Write code',
-                    'Brainstorm ideas',
-                    'Explain concepts',
+                    'Research',
+                    'Code',
+                    'Ideas',
+                    'Explain',
                   ].map((prompt) => (
                     <button
                       key={prompt}
-                      onClick={() => handleSendMessage(prompt)}
+                      onClick={() => handleSendMessage(`${prompt} something for me`)}
                       className="adam-button text-sm py-2"
                     >
                       {prompt}
@@ -166,13 +166,13 @@ export function ChatWindow() {
             ))
           )}
           {isLoading && (
-            <div className="flex items-center gap-2 text-cyan-400">
+            <div className="flex items-center gap-2 text-slate-500">
               <div className="inline-flex gap-1">
-                <div className="w-2 h-2 rounded-full bg-cyan-400 animate-bounce" />
-                <div className="w-2 h-2 rounded-full bg-cyan-400 animate-bounce delay-100" />
-                <div className="w-2 h-2 rounded-full bg-cyan-400 animate-bounce delay-200" />
+                <div className="w-2 h-2 rounded-full bg-slate-500 animate-bounce" />
+                <div className="w-2 h-2 rounded-full bg-slate-500 animate-bounce delay-100" />
+                <div className="w-2 h-2 rounded-full bg-slate-500 animate-bounce delay-200" />
               </div>
-              <span className="text-sm">Adam is thinking...</span>
+              <span className="text-sm">Thinking...</span>
             </div>
           )}
           <div ref={messagesEndRef} />

@@ -1,10 +1,40 @@
-import Anthropic from '@anthropic-ai/sdk'
+export type AIProvider = 'groq' | 'cerebras' | 'together' | 'openrouter'
 
-const apiKey = process.env.ANTHROPIC_API_KEY || 'placeholder'
+export interface ProviderConfig {
+  name: string
+  apiKey: string
+  baseUrl: string
+  model: string
+}
 
-export const claude = new Anthropic({
-  apiKey,
-})
+export const PROVIDERS: Record<AIProvider, ProviderConfig> = {
+  groq: {
+    name: 'Groq (Fastest)',
+    apiKey: process.env.GROQ_API_KEY || '',
+    baseUrl: 'https://api.groq.com/openai/v1',
+    model: 'mixtral-8x7b-32768',
+  },
+  cerebras: {
+    name: 'Cerebras',
+    apiKey: process.env.CEREBRAS_API_KEY || '',
+    baseUrl: 'https://api.cerebras.ai/v1',
+    model: 'llama-3.1-70b',
+  },
+  together: {
+    name: 'Together AI',
+    apiKey: process.env.TOGETHER_API_KEY || '',
+    baseUrl: 'https://api.together.xyz/v1',
+    model: 'meta-llama/Llama-3-70b-chat-hf',
+  },
+  openrouter: {
+    name: 'OpenRouter',
+    apiKey: process.env.OPENROUTER_API_KEY || '',
+    baseUrl: 'https://openrouter.ai/api/v1',
+    model: 'meta-llama/llama-3.1-70b-instruct:free',
+  },
+}
+
+export const DEFAULT_PROVIDER: AIProvider = 'groq'
 
 export const SYSTEM_PROMPT = `You are TRUE ADAM, an advanced AI operating system built for maximum productivity and insight.
 
@@ -22,6 +52,10 @@ When users ask you to research topics, provide detailed, markdown-formatted repo
 - Tables for comparisons
 - Actionable insights and takeaways
 
-You have access to persistent memory and can recall previous conversations. Leverage this to provide increasingly personalized and contextual responses.
+Remember: You're not just an AI - you're a trusted intellectual partner. Get to the point, no fluff.`
 
-Remember: You're not just an AI - you're a trusted intellectual partner.`
+export function getAvailableProviders(): AIProvider[] {
+  return Object.keys(PROVIDERS).filter(
+    (key) => PROVIDERS[key as AIProvider].apiKey
+  ) as AIProvider[]
+}

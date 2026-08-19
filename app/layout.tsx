@@ -21,7 +21,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${geist.className} bg-gradient-to-br from-slate-950 via-blue-950 to-slate-950 text-slate-50 min-h-screen`}>
+      <body className={`${geist.className} bg-slate-950 text-slate-50 min-h-screen`}>
         {children}
       </body>
     </html>

@@ -131,26 +131,26 @@
 
 @layer components {
   .adam-title {
-    @apply text-4xl font-black tracking-wider bg-gradient-to-r from-cyan-400 via-blue-400 to-cyan-500 bg-clip-text text-transparent;
+    @apply text-3xl font-bold text-slate-100 tracking-tight;
   }
 
   .adam-subtitle {
-    @apply text-sm tracking-widest text-cyan-300 uppercase font-medium;
+    @apply text-xs tracking-wide text-slate-500 uppercase font-semibold;
   }
 
   .adam-message-user {
-    @apply bg-blue-950/50 border border-blue-800 rounded-lg p-4 text-slate-100;
+    @apply bg-slate-800 border border-slate-700 rounded-lg p-4 text-slate-100;
   }
 
   .adam-message-ai {
-    @apply bg-slate-900/50 border border-cyan-700/50 rounded-lg p-4 text-slate-50;
+    @apply bg-slate-900 border border-slate-700 rounded-lg p-4 text-slate-50;
   }
 
   .adam-button {
-    @apply px-4 py-2 rounded-lg bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-semibold transition-all duration-200 shadow-lg hover:shadow-cyan-500/50;
+    @apply px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white font-semibold transition-all duration-150 border border-slate-600 hover:border-slate-500;
   }
 
   .adam-input {
-    @apply bg-slate-900/50 border border-cyan-700/30 rounded-lg px-4 py-2 text-slate-50 placeholder:text-slate-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all;
+    @apply bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-slate-50 placeholder:text-slate-600 focus:border-slate-600 focus:outline-none focus:ring-1 focus:ring-slate-600 transition-all;
   }
 }

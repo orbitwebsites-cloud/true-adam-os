@@ -75,7 +75,7 @@ export function ChatInput({ onSendMessage, isLoading }: ChatInputProps) {
   }
 
   return (
-    <div className="border-t border-cyan-700/30 bg-slate-900/30 backdrop-blur px-4 md:px-8 py-4">
+    <div className="border-t border-slate-700 bg-slate-900 px-4 md:px-8 py-4">
       <form onSubmit={handleSubmit} className="flex gap-2">
         <input
           type="text"

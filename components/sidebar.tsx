@@ -22,7 +22,7 @@ export function Sidebar({ isOpen, onClose, messageCount, onClear }: SidebarProps
 
       {/* Sidebar */}
       <aside
-        className={`fixed md:relative w-64 h-screen bg-slate-900 border-r border-cyan-700/30 flex flex-col transform transition-transform duration-300 z-50 ${
+        className={`fixed md:relative w-64 h-screen bg-slate-900 border-r border-slate-700 flex flex-col transform transition-transform duration-300 z-50 ${
           isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         }`}
       >
@@ -35,23 +35,23 @@ export function Sidebar({ isOpen, onClose, messageCount, onClear }: SidebarProps
         </button>
 
         {/* Header */}
-        <div className="p-6 border-b border-cyan-700/30">
-          <h2 className="text-sm font-semibold text-cyan-400 uppercase tracking-wider">
+        <div className="p-6 border-b border-slate-700">
+          <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider">
             TRUE ADAM
           </h2>
-          <p className="text-xs text-slate-400 mt-1">AI Operating System</p>
+          <p className="text-xs text-slate-500 mt-1">Free AI OS</p>
         </div>
 
         {/* Stats */}
-        <div className="p-4 mx-4 mt-4 rounded-lg bg-slate-800/50 border border-cyan-700/20">
+        <div className="p-4 mx-4 mt-4 rounded-lg bg-slate-800 border border-slate-700">
           <div className="text-xs text-slate-400">
             <div className="flex justify-between mb-2">
               <span>Messages:</span>
-              <span className="text-cyan-400 font-semibold">{messageCount}</span>
+              <span className="text-slate-300 font-semibold">{messageCount}</span>
             </div>
             <div className="flex justify-between">
               <span>Status:</span>
-              <span className="text-green-400 font-semibold">Active</span>
+              <span className="text-slate-400 font-semibold">Ready</span>
             </div>
           </div>
         </div>
@@ -87,11 +87,11 @@ export function Sidebar({ isOpen, onClose, messageCount, onClear }: SidebarProps
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-cyan-700/30 text-xs text-slate-400 space-y-1">
-          <p>Claude 3.5 Sonnet</p>
-          <p>Persistent Memory Enabled</p>
+        <div className="p-4 border-t border-slate-700 text-xs text-slate-400 space-y-1">
+          <p>Groq • Cerebras • Together</p>
+          <p>Free APIs • No bills</p>
           <p className="pt-2 text-slate-500">
-            Built with Next.js + Vercel
+            Next.js on Vercel
           </p>
         </div>
       </aside>
