@@ -73,8 +73,51 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Return the streaming response directly
-    return new Response(response.body, {
+    // Transform the streaming response
+    const reader = response.body?.getReader()
+    if (!reader) {
+      return NextResponse.json(
+        { error: 'No response stream' },
+        { status: 500 }
+      )
+    }
+
+    const stream = new ReadableStream({
+      async start(controller) {
+        try {
+          const decoder = new TextDecoder()
+          while (true) {
+            const { done, value } = await reader.read()
+            if (done) break
+
+            const chunk = decoder.decode(value, { stream: true })
+            const lines = chunk.split('\n')
+
+            for (const line of lines) {
+              if (line.startsWith('data: ')) {
+                const data = line.slice(6)
+                if (data === '[DONE]') continue
+
+                try {
+                  const parsed = JSON.parse(data)
+                  if (parsed.choices?.[0]?.delta?.content) {
+                    const text = parsed.choices[0].delta.content
+                    controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({ type: 'content_block_delta', delta: { type: 'text_delta', text } })}\n\n`))
+                  }
+                } catch (e) {
+                  // Skip parse errors
+                }
+              }
+            }
+          }
+          controller.close()
+        } catch (error) {
+          controller.error(error)
+        }
+      },
+    })
+
+    return new Response(stream, {
       headers: {
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
