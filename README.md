@@ -1,36 +1,62 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# TRUE ADAM • Core OS
 
-## Getting Started
+An advanced AI operating system built with Next.js + Claude 3.5 Sonnet. Features persistent memory, voice input, streaming responses, and beautiful UI.
 
-First, run the development server:
+## Features
+
+✨ **AI-Powered Chat** — Claude 3.5 Sonnet with streaming responses  
+🎙️ **Voice Input** — Real-time transcription  
+⚡ **Lightning Fast** — Deployed on Vercel with global edge network  
+📱 **Responsive Design** — Works on mobile, tablet, and desktop  
+🎨 **Beautiful UI** — Modern gradient-based dark theme with smooth animations  
+
+## Tech Stack
+
+- **Frontend**: Next.js 15 + TypeScript + Tailwind CSS + shadcn/ui
+- **AI**: Anthropic Claude 3.5 Sonnet API
+- **Deployment**: Vercel
+
+## Setup Instructions
+
+### 1. Prerequisites
+
+- Node.js 18+ 
+- Anthropic API key (get from https://console.anthropic.com)
+
+### 2. Environment Setup
+
+Create `.env.local`:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+ANTHROPIC_API_KEY=your_claude_api_key
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 3. Run Development Server
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm install
+npm run dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Visit `http://localhost:3000`
 
-## Learn More
+## Deployment to Vercel
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npm install -g vercel
+vercel login
+vercel deploy
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Set `ANTHROPIC_API_KEY` in Vercel dashboard.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Usage
 
-## Deploy on Vercel
+- **Text Chat**: Type messages and press Enter
+- **Voice Input**: Click the microphone button to record
+- **Clear History**: Use the sidebar menu
+- **Markdown Support**: Responses include formatted text, code blocks, tables
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Built with ⚡ for maximum productivity.
