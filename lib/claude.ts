@@ -12,13 +12,13 @@ export const PROVIDERS: Record<AIProvider, ProviderConfig> = {
     name: 'Groq (Fastest)',
     apiKey: process.env.GROQ_API_KEY || '',
     baseUrl: 'https://api.groq.com/openai/v1',
-    model: 'mixtral-8x7b-32768',
+    model: 'llama-3.3-70b-versatile',
   },
   cerebras: {
     name: 'Cerebras',
     apiKey: process.env.CEREBRAS_API_KEY || '',
     baseUrl: 'https://api.cerebras.ai/v1',
-    model: 'llama-3.1-70b',
+    model: 'llama-3.3-70b',
   },
   together: {
     name: 'Together AI',

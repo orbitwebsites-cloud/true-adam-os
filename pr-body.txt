@@ -1,0 +1,53 @@
+🚀 Major Upgrade - TRUE ADAM v2.0
+
+Completely rebuilt your Streamlit app into a production-ready Next.js application powered by FREE AI APIs.
+
+✨ What's New
+
+- 100% Free AI: Groq, Cerebras, Together AI, OpenRouter (no subscriptions, no billing)
+- Built with Next.js: Modern TypeScript, production-ready code
+- Deployed on Vercel: Global CDN, instant worldwide access
+- Minimal UI: Clean, handbuilt aesthetic (not AI-generated look)
+- Streaming Responses: Real-time token streaming from LLMs
+- Voice Input: Microphone recording ready
+- Zero Cost: Local dev, Vercel free tier, unlimited API calls
+
+Getting Started
+
+1. Clone & Install
+   git clone https://github.com/orbitwebsites-cloud/true-adam-os
+   npm install
+
+2. Add Free API Key (pick one)
+   - Groq (fastest): https://console.groq.com → copy API key
+   - Cerebras: https://www.cerebras.ai/api
+   - Together: https://www.together.ai
+   - OpenRouter: https://openrouter.ai
+
+3. Create `.env.local`
+   GROQ_API_KEY=gsk_xxxxx
+   # or CEREBRAS_API_KEY, TOGETHER_API_KEY, etc
+
+4. Run Locally
+   npm run dev
+   # Visit http://localhost:3000
+
+5. Deploy to Vercel
+   npm i -g vercel
+   vercel
+   # Add API key in dashboard
+   vercel --prod
+
+Documentation
+
+- README.md: Quick start
+- FREE_APIS_GUIDE.md: Detailed provider setup
+- DEPLOYMENT_GUIDE.md: Vercel deployment
+
+Live Demo
+
+Already deployed: https://true-adam-os.vercel.app
+
+Costs
+
+Running this costs $0.00 - all AI providers are free, Vercel free tier handles production traffic.

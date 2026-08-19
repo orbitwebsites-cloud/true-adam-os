@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
       const error = await response.text()
       console.error('Provider error:', error)
       return NextResponse.json(
-        { error: `AI Provider error: ${response.status}` },
+        { error: `AI Provider (${provider}) error: ${response.status}`, details: error },
         { status: response.status }
       )
     }
