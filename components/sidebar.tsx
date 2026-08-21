@@ -1,6 +1,7 @@
 'use client'
 
-import { X, Trash2, Settings, Info } from 'lucide-react'
+import { X, Trash2, Settings, Info, Download } from 'lucide-react'
+import { DOWNLOAD_URL } from '@/lib/download'
 
 interface SidebarProps {
   isOpen: boolean
@@ -107,6 +108,21 @@ export function Sidebar({
               <p className="text-xs text-slate-600 flex items-center gap-1 pt-1">
                 <Info className="w-3 h-3" />
                 Closing the window minimizes to tray
+              </p>
+            </div>
+          )}
+
+          {!desktop && (
+            <div className="pt-4 border-t border-slate-700">
+              <a
+                href={DOWNLOAD_URL}
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm bg-slate-100 text-slate-900 hover:bg-white font-semibold transition-colors"
+              >
+                <Download className="w-4 h-4" />
+                Get Desktop App
+              </a>
+              <p className="text-xs text-slate-500 px-1 pt-2">
+                Opens real apps &amp; websites, tray icon, global hotkey.
               </p>
             </div>
           )}

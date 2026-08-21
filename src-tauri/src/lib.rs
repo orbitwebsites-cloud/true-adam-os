@@ -5,6 +5,8 @@ use tauri::{
 };
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 
+mod commands;
+
 fn toggle_window(app: &tauri::AppHandle) {
     if let Some(window) = app.get_webview_window("main") {
         if window.is_visible().unwrap_or(false) {
@@ -31,6 +33,10 @@ pub fn run() {
                 })
                 .build(),
         )
+        .invoke_handler(tauri::generate_handler![
+            commands::open_url,
+            commands::open_app
+        ])
         .setup(|app| {
             if cfg!(debug_assertions) {
                 app.handle().plugin(

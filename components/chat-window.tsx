@@ -6,8 +6,10 @@ import { MessageDisplay } from './message-display'
 import { ChatInput } from './chat-input'
 import { Sidebar } from './sidebar'
 import { SettingsModal } from './settings-modal'
-import { Zap, Settings as SettingsIcon } from 'lucide-react'
+import { Zap, Settings as SettingsIcon, Download } from 'lucide-react'
 import { streamChat, ChatError } from '@/lib/chat-client'
+import { tryHandleLaunchCommand } from '@/lib/app-launcher'
+import { DOWNLOAD_URL } from '@/lib/download'
 import {
   AppSettings,
   isTauri,
@@ -71,6 +73,27 @@ export function ChatWindow() {
 
     const nextMessages = [...messages, userMessage]
     setMessages(nextMessages)
+
+    // "open X" commands are handled locally (launch a site or app) instead
+    // of going to the LLM. On web, local-app requests can't actually launch
+    // anything — point the user at the desktop app instead.
+    const launch = await tryHandleLaunchCommand(content)
+    if (launch.handled) {
+      const replyText = launch.needsDesktop
+        ? `🖥️ Opening apps only works in the **desktop app** — a browser can't launch programs on your computer. [Download TRUE ADAM for desktop](${DOWNLOAD_URL}) to open ${launch.target} and anything else.`
+        : launch.reply || ''
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `msg-${Date.now()}-launch`,
+          content: replyText,
+          role: 'assistant',
+          timestamp: new Date(),
+        },
+      ])
+      return
+    }
+
     setIsLoading(true)
 
     const aiMessageId = `msg-${Date.now()}-ai`
@@ -210,6 +233,15 @@ export function ChatWindow() {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              {!desktop && (
+                <a
+                  href={DOWNLOAD_URL}
+                  className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm bg-slate-100 text-slate-900 hover:bg-white font-semibold transition-colors"
+                >
+                  <Download className="w-4 h-4" />
+                  Get Desktop App
+                </a>
+              )}
               <button
                 onClick={() => setShowSettings(true)}
                 className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
@@ -251,6 +283,15 @@ export function ChatWindow() {
                     </button>
                   ))}
                 </div>
+                {!desktop && (
+                  <p className="text-xs text-slate-600 max-w-md mx-auto pt-2">
+                    Try "open notepad" or "open youtube" — full app-launching needs the{' '}
+                    <a href={DOWNLOAD_URL} className="text-slate-400 hover:text-slate-200 underline">
+                      desktop app
+                    </a>
+                    .
+                  </p>
+                )}
               </div>
             </div>
           ) : (
