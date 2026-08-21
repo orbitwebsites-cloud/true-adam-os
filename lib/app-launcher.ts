@@ -18,9 +18,78 @@ const WEBSITE_SHORTCUTS: Record<string, string> = {
   britannica: 'https://www.britannica.com',
   amazon: 'https://www.amazon.com',
   stackoverflow: 'https://stackoverflow.com',
+  instagram: 'https://www.instagram.com',
+  facebook: 'https://www.facebook.com',
+  linkedin: 'https://www.linkedin.com',
+  tiktok: 'https://www.tiktok.com',
+  discord: 'https://discord.com/app',
+  claude: 'https://claude.ai',
+  duckduckgo: 'https://duckduckgo.com',
+  whatsapp: 'https://web.whatsapp.com',
 }
 
-const LOCAL_APP_SHORTCUTS = ['notepad', 'calculator', 'calc', 'explorer', 'files', 'paint', 'terminal', 'cmd', 'command prompt']
+// Abbreviations/aliases -> canonical key in WEBSITE_SHORTCUTS.
+const WEBSITE_ALIASES: Record<string, string> = {
+  gpt: 'chatgpt',
+  chat: 'chatgpt',
+  yt: 'youtube',
+  ig: 'instagram',
+  insta: 'instagram',
+  fb: 'facebook',
+  li: 'linkedin',
+  ddg: 'duckduckgo',
+  gh: 'github',
+  so: 'stackoverflow',
+  wiki: 'wikipedia',
+  amzn: 'amazon',
+  nflx: 'netflix',
+  wa: 'whatsapp',
+  gdocs: 'google docs',
+  twt: 'twitter',
+}
+
+// Local desktop apps the Rust side (src-tauri/src/commands.rs) knows how to
+// launch. Keep this list in sync with that match arm.
+const LOCAL_APP_SHORTCUTS = [
+  'notepad',
+  'calculator',
+  'calc',
+  'explorer',
+  'files',
+  'file explorer',
+  'paint',
+  'terminal',
+  'cmd',
+  'command prompt',
+  'task manager',
+  'settings',
+  'firefox',
+  'ff',
+  'chrome',
+  'edge',
+  'spotify',
+  'discord',
+  'slack',
+  'vscode',
+  'vs code',
+  'code',
+  'word',
+  'excel',
+  'powerpoint',
+  'steam',
+  'whatsapp',
+  'telegram',
+  'zoom',
+]
+
+const LOCAL_APP_ALIASES: Record<string, string> = {
+  vs: 'vscode',
+  ff: 'firefox',
+  gc: 'chrome',
+  wa: 'whatsapp',
+  tg: 'telegram',
+  disc: 'discord',
+}
 
 export interface LaunchResult {
   handled: boolean
@@ -39,6 +108,15 @@ function parseTarget(prompt: string): string | null {
     .trim()
 }
 
+/** Resolves aliases/abbreviations and fuzzy-matches against a known key set. */
+function resolve(target: string, aliases: Record<string, string>, keys: string[]): string | null {
+  if (aliases[target]) return aliases[target]
+  if (keys.includes(target)) return target
+  // Substring match either direction (e.g. "google chrome" contains "chrome").
+  const match = keys.find((k) => target.includes(k) || k.includes(target))
+  return match ?? null
+}
+
 /**
  * Intercepts "open X" style commands before they reach the LLM.
  * On desktop, actually launches the site/app via Tauri commands.
@@ -51,43 +129,45 @@ export async function tryHandleLaunchCommand(prompt: string): Promise<LaunchResu
 
   const desktop = isTauri()
 
-  if (target in WEBSITE_SHORTCUTS) {
-    const url = WEBSITE_SHORTCUTS[target]
+  const siteKey = resolve(target, WEBSITE_ALIASES, Object.keys(WEBSITE_SHORTCUTS))
+  if (siteKey) {
+    const url = WEBSITE_SHORTCUTS[siteKey]
     if (desktop) {
       const { invoke } = await import('@tauri-apps/api/core')
       await invoke('open_url', { url })
     } else {
       window.open(url, '_blank', 'noopener,noreferrer')
     }
-    return { handled: true, reply: `🌐 Opening ${target}. Locked in, W.` }
+    return { handled: true, reply: `🌐 Opening ${siteKey}. Locked in, W.` }
   }
 
-  if (LOCAL_APP_SHORTCUTS.some((app) => target.includes(app))) {
+  const appKey = resolve(target, LOCAL_APP_ALIASES, LOCAL_APP_SHORTCUTS)
+  if (appKey) {
     if (desktop) {
       const { invoke } = await import('@tauri-apps/api/core')
       try {
-        await invoke('open_app', { target })
-        return { handled: true, reply: `🖥️ ${target.charAt(0).toUpperCase() + target.slice(1)} launched.` }
+        await invoke('open_app', { target: appKey })
+        return { handled: true, reply: `🖥️ ${appKey.charAt(0).toUpperCase() + appKey.slice(1)} launched.` }
       } catch (e) {
-        return { handled: true, reply: `⚠️ Couldn't launch ${target}: ${String(e)}` }
+        return { handled: true, reply: `⚠️ Couldn't launch ${appKey}: ${String(e)}` }
       }
     }
-    return { handled: true, needsDesktop: true, target }
+    return { handled: true, needsDesktop: true, target: appKey }
   }
 
-  if (target && !desktop) {
-    // Unknown target on web: best effort, just a Google search tab
-    const url = `https://www.google.com/search?q=${encodeURIComponent(target)}`
-    window.open(url, '_blank', 'noopener,noreferrer')
-    return { handled: true, reply: `🌐 Couldn't find an exact match, so I pulled up a search for "${target}", bestie.` }
-  }
-
-  if (target && desktop) {
-    const clean = target.replace(/\s+/g, '')
-    const { invoke } = await import('@tauri-apps/api/core')
-    const url = clean.includes('.') ? `https://${clean}` : `https://www.google.com/search?q=${encodeURIComponent(target)}`
-    await invoke('open_url', { url })
-    return { handled: true, reply: `🌐 Opening "${target}" for you, bestie.` }
+  // Unknown target: be honest instead of pretending to open it.
+  if (target) {
+    const query = `https://www.google.com/search?q=${encodeURIComponent(target)}`
+    if (desktop) {
+      const { invoke } = await import('@tauri-apps/api/core')
+      await invoke('open_url', { url: query })
+    } else {
+      window.open(query, '_blank', 'noopener,noreferrer')
+    }
+    return {
+      handled: true,
+      reply: `🔍 I don't have "${target}" mapped to a site or app yet, so I pulled up a search for it instead.`,
+    }
   }
 
   return { handled: false }
