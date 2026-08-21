@@ -72,11 +72,14 @@ dependencies = [
  "open",
  "serde",
  "serde_json",
+ "strsim",
  "tauri",
  "tauri-build",
  "tauri-plugin-global-shortcut",
  "tauri-plugin-log",
  "tauri-plugin-store",
+ "walkdir",
+ "winreg",
 ]
 
 [[package]]

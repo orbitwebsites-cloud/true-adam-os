@@ -1,47 +1,48 @@
 use std::process::Command;
 
+use crate::app_discovery;
+
 /// Opens a URL in the user's default browser.
 #[tauri::command]
 pub fn open_url(url: String) -> Result<(), String> {
     open::that(url).map_err(|e| e.to_string())
 }
 
-/// Launches a local desktop app. Only a fixed, known-safe set of targets is
-/// allowed — this receives text derived from chat input, so it must never
-/// spawn an arbitrary process name. Uses the shell's `start` verb so Windows
-/// resolves the target via the App Paths registry (works even if the app
-/// isn't on PATH, which is the common case for installed GUI apps).
-#[tauri::command]
-pub fn open_app(target: String) -> Result<(), String> {
-    let key = target.to_lowercase();
-    let start_target: &str = match key.as_str() {
-        "notepad" => "notepad.exe",
-        "calculator" | "calc" => "calc.exe",
-        "explorer" | "files" | "file explorer" => "explorer.exe",
-        "paint" => "mspaint.exe",
-        "terminal" | "cmd" | "command prompt" => "cmd.exe",
-        "task manager" => "taskmgr.exe",
-        "settings" => "ms-settings:",
-        "firefox" | "mozilla firefox" | "ff" => "firefox.exe",
-        "chrome" | "google chrome" => "chrome.exe",
-        "edge" | "microsoft edge" => "msedge.exe",
-        "spotify" => "spotify.exe",
-        "discord" => "Discord.exe",
-        "slack" => "slack.exe",
-        "vscode" | "vs code" | "visual studio code" | "code" => "Code.exe",
-        "word" | "microsoft word" => "winword.exe",
-        "excel" | "microsoft excel" => "excel.exe",
-        "powerpoint" => "powerpnt.exe",
-        "steam" => "steam.exe",
-        "whatsapp" => "WhatsApp.exe",
-        "telegram" => "Telegram.exe",
-        "zoom" => "Zoom.exe",
-        _ => return Err(format!("Unknown app: {target}")),
-    };
-
+fn launch_via_start(target: &str) -> Result<(), String> {
     Command::new("cmd")
-        .args(["/C", "start", "", start_target])
+        .args(["/C", "start", "", target])
         .spawn()
         .map(|_| ())
         .map_err(|e| e.to_string())
+}
+
+/// Launches a local desktop app. Tries a small fixed list of common special
+/// cases first (things like Settings that aren't a normal .exe), then falls
+/// back to scanning the Start Menu + registry App Paths for a fuzzy name
+/// match — this is what lets it launch anything actually installed, not
+/// just a hand-maintained list.
+#[tauri::command]
+pub fn open_app(target: String) -> Result<(), String> {
+    let key = target.to_lowercase();
+
+    let fixed: Option<&str> = match key.as_str() {
+        "notepad" => Some("notepad.exe"),
+        "calculator" | "calc" => Some("calc.exe"),
+        "explorer" | "files" | "file explorer" => Some("explorer.exe"),
+        "paint" => Some("mspaint.exe"),
+        "terminal" | "cmd" | "command prompt" => Some("cmd.exe"),
+        "task manager" => Some("taskmgr.exe"),
+        "settings" => Some("ms-settings:"),
+        _ => None,
+    };
+
+    if let Some(start_target) = fixed {
+        return launch_via_start(start_target);
+    }
+
+    if let Some(start_target) = app_discovery::find_best_match(&target) {
+        return launch_via_start(&start_target);
+    }
+
+    Err(format!("Couldn't find an installed app matching '{target}'"))
 }

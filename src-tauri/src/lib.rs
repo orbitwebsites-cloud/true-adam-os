@@ -5,6 +5,7 @@ use tauri::{
 };
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 
+mod app_discovery;
 mod commands;
 
 fn toggle_window(app: &tauri::AppHandle) {

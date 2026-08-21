@@ -48,49 +48,6 @@ const WEBSITE_ALIASES: Record<string, string> = {
   twt: 'twitter',
 }
 
-// Local desktop apps the Rust side (src-tauri/src/commands.rs) knows how to
-// launch. Keep this list in sync with that match arm.
-const LOCAL_APP_SHORTCUTS = [
-  'notepad',
-  'calculator',
-  'calc',
-  'explorer',
-  'files',
-  'file explorer',
-  'paint',
-  'terminal',
-  'cmd',
-  'command prompt',
-  'task manager',
-  'settings',
-  'firefox',
-  'ff',
-  'chrome',
-  'edge',
-  'spotify',
-  'discord',
-  'slack',
-  'vscode',
-  'vs code',
-  'code',
-  'word',
-  'excel',
-  'powerpoint',
-  'steam',
-  'whatsapp',
-  'telegram',
-  'zoom',
-]
-
-const LOCAL_APP_ALIASES: Record<string, string> = {
-  vs: 'vscode',
-  ff: 'firefox',
-  gc: 'chrome',
-  wa: 'whatsapp',
-  tg: 'telegram',
-  disc: 'discord',
-}
-
 export interface LaunchResult {
   handled: boolean
   reply?: string
@@ -108,20 +65,22 @@ function parseTarget(prompt: string): string | null {
     .trim()
 }
 
-/** Resolves aliases/abbreviations and fuzzy-matches against a known key set. */
-function resolve(target: string, aliases: Record<string, string>, keys: string[]): string | null {
-  if (aliases[target]) return aliases[target]
-  if (keys.includes(target)) return target
-  // Substring match either direction (e.g. "google chrome" contains "chrome").
-  const match = keys.find((k) => target.includes(k) || k.includes(target))
-  return match ?? null
+function resolveWebsite(target: string): string | null {
+  if (WEBSITE_ALIASES[target]) return WEBSITE_ALIASES[target]
+  if (WEBSITE_SHORTCUTS[target]) return target
+  const keys = Object.keys(WEBSITE_SHORTCUTS)
+  return keys.find((k) => target.includes(k) || k.includes(target)) ?? null
 }
 
 /**
  * Intercepts "open X" style commands before they reach the LLM.
- * On desktop, actually launches the site/app via Tauri commands.
- * On web, opens websites in a new tab; local-app requests get a
- * "download the desktop app" prompt since browsers can't spawn processes.
+ *
+ * Websites are matched against a curated list (with abbreviations). Local
+ * apps are NOT guessed client-side: on desktop, the actual matching against
+ * everything installed (Start Menu + registry) happens in Rust via
+ * `open_app`, since only the OS can know what's really on the machine. On
+ * web, local-app requests are pointed at the desktop download instead of
+ * faking a result — a browser genuinely cannot launch a process.
  */
 export async function tryHandleLaunchCommand(prompt: string): Promise<LaunchResult> {
   const target = parseTarget(prompt)
@@ -129,7 +88,7 @@ export async function tryHandleLaunchCommand(prompt: string): Promise<LaunchResu
 
   const desktop = isTauri()
 
-  const siteKey = resolve(target, WEBSITE_ALIASES, Object.keys(WEBSITE_SHORTCUTS))
+  const siteKey = resolveWebsite(target)
   if (siteKey) {
     const url = WEBSITE_SHORTCUTS[siteKey]
     if (desktop) {
@@ -141,34 +100,19 @@ export async function tryHandleLaunchCommand(prompt: string): Promise<LaunchResu
     return { handled: true, reply: `🌐 Opening ${siteKey}. Locked in, W.` }
   }
 
-  const appKey = resolve(target, LOCAL_APP_ALIASES, LOCAL_APP_SHORTCUTS)
-  if (appKey) {
-    if (desktop) {
-      const { invoke } = await import('@tauri-apps/api/core')
-      try {
-        await invoke('open_app', { target: appKey })
-        return { handled: true, reply: `🖥️ ${appKey.charAt(0).toUpperCase() + appKey.slice(1)} launched.` }
-      } catch (e) {
-        return { handled: true, reply: `⚠️ Couldn't launch ${appKey}: ${String(e)}` }
+  if (desktop) {
+    const { invoke } = await import('@tauri-apps/api/core')
+    try {
+      await invoke('open_app', { target })
+      return { handled: true, reply: `🖥️ Launched ${target}.` }
+    } catch (e) {
+      return {
+        handled: true,
+        reply: `⚠️ Couldn't find "${target}" installed, or "${target}" as a known site. Try being more specific?`,
       }
     }
-    return { handled: true, needsDesktop: true, target: appKey }
   }
 
-  // Unknown target: be honest instead of pretending to open it.
-  if (target) {
-    const query = `https://www.google.com/search?q=${encodeURIComponent(target)}`
-    if (desktop) {
-      const { invoke } = await import('@tauri-apps/api/core')
-      await invoke('open_url', { url: query })
-    } else {
-      window.open(query, '_blank', 'noopener,noreferrer')
-    }
-    return {
-      handled: true,
-      reply: `🔍 I don't have "${target}" mapped to a site or app yet, so I pulled up a search for it instead.`,
-    }
-  }
-
-  return { handled: false }
+  // Web: can't launch local processes from a browser — be upfront about it.
+  return { handled: true, needsDesktop: true, target }
 }
