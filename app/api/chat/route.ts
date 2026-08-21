@@ -30,46 +30,80 @@ export async function POST(request: NextRequest) {
       provider = availableProviders[0] || DEFAULT_PROVIDER
     }
 
-    const config = PROVIDERS[provider]
-
-    if (!config.apiKey) {
-      return NextResponse.json(
-        { error: `Provider ${provider} not configured` },
-        { status: 500 }
-      )
-    }
-
     // Format messages for OpenAI-compatible API
     const formattedMessages = messages.map((msg: Message) => ({
       role: msg.role,
       content: msg.content,
     }))
 
-    // Stream response from provider
-    const response = await fetch(`${config.baseUrl}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${config.apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: config.model,
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          ...formattedMessages,
-        ],
-        max_tokens: 2048,
-        stream: true,
-        temperature: 0.7,
-      }),
-    })
+    // Try the selected provider first, then fall back through the rest.
+    // Retries transient errors (429/5xx) with backoff before moving on.
+    const orderedProviders = [
+      provider,
+      ...availableProviders.filter((p) => p !== provider),
+    ]
 
-    if (!response.ok) {
-      const error = await response.text()
-      console.error('Provider error:', error)
+    let response: Response | null = null
+    let lastErrorBody = ''
+    let lastStatus = 500
+    let usedProvider = provider
+
+    outer: for (const candidate of orderedProviders) {
+      const config = PROVIDERS[candidate]
+      const maxRetries = 2
+
+      for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        try {
+          const attemptResponse = await fetch(`${config.baseUrl}/chat/completions`, {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${config.apiKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: config.model,
+              messages: [
+                { role: 'system', content: SYSTEM_PROMPT },
+                ...formattedMessages,
+              ],
+              max_tokens: 2048,
+              stream: true,
+              temperature: 0.7,
+            }),
+          })
+
+          if (attemptResponse.ok) {
+            response = attemptResponse
+            usedProvider = candidate
+            break outer
+          }
+
+          lastStatus = attemptResponse.status
+          lastErrorBody = await attemptResponse.text()
+          console.error(`Provider ${candidate} error (attempt ${attempt}):`, lastErrorBody)
+
+          const retryable = attemptResponse.status === 429 || attemptResponse.status >= 500
+          if (!retryable) break // move to next provider immediately
+          if (attempt < maxRetries) {
+            await new Promise((r) => setTimeout(r, 400 * 2 ** attempt))
+          }
+        } catch (err) {
+          lastErrorBody = String(err)
+          console.error(`Provider ${candidate} network error (attempt ${attempt}):`, err)
+          if (attempt < maxRetries) {
+            await new Promise((r) => setTimeout(r, 400 * 2 ** attempt))
+          }
+        }
+      }
+    }
+
+    if (!response) {
       return NextResponse.json(
-        { error: `AI Provider (${provider}) error: ${response.status}`, details: error },
-        { status: response.status }
+        {
+          error: `All providers failed (last: ${usedProvider}, status ${lastStatus})`,
+          details: lastErrorBody,
+        },
+        { status: lastStatus >= 400 ? lastStatus : 502 }
       )
     }
 

@@ -15,7 +15,7 @@ export function MessageDisplay({ message }: MessageDisplayProps) {
   return (
     <div className={`flex gap-3 ${isUser ? 'justify-end' : 'justify-start'}`}>
       {!isUser && (
-        <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-r from-cyan-600 to-blue-600 flex items-center justify-center text-white">
+        <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-slate-700 flex items-center justify-center text-slate-200">
           <Bot className="w-5 h-5" />
         </div>
       )}
@@ -27,6 +27,13 @@ export function MessageDisplay({ message }: MessageDisplayProps) {
             Voice input
           </div>
         )}
+        {message.content === '' ? (
+          <div className="flex gap-1 py-1">
+            <div className="w-1.5 h-1.5 rounded-full bg-slate-500 animate-bounce" />
+            <div className="w-1.5 h-1.5 rounded-full bg-slate-500 animate-bounce delay-100" />
+            <div className="w-1.5 h-1.5 rounded-full bg-slate-500 animate-bounce delay-200" />
+          </div>
+        ) : (
         <div className="prose prose-invert max-w-none text-sm leading-relaxed">
           <ReactMarkdown
             components={{
@@ -55,6 +62,7 @@ export function MessageDisplay({ message }: MessageDisplayProps) {
             {message.content}
           </ReactMarkdown>
         </div>
+        )}
       </div>
 
       {isUser && (

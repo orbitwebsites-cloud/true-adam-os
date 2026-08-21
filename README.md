@@ -5,17 +5,20 @@ A free AI operating system powered by Groq, Cerebras, and other free APIs. Built
 ## Features
 
 ✨ **Free AI** — Groq, Cerebras, Together AI, OpenRouter (no billing)  
+🖥️ **Desktop App** — Native app for Windows/macOS/Linux via Tauri (see [DESKTOP_APP_GUIDE.md](./DESKTOP_APP_GUIDE.md))  
 ⚡ **Blazing Fast** — Sub-second inference times  
 📱 **Mobile Ready** — Works perfectly on all devices  
 🎙️ **Voice Input** — Record and chat via microphone  
-🔄 **Streaming** — Real-time response tokens  
+🔄 **Streaming with auto-retry** — Transient errors retry automatically, with fallback across providers  
+💾 **Persistent chat history** — Conversations survive refreshes/restarts  
 🧹 **Clean UI** — Minimal, handbuilt aesthetic  
 
 ## Tech Stack
 
 - **Frontend**: Next.js 15 + TypeScript + Tailwind CSS
+- **Desktop**: Tauri 2 (Rust) — system tray, global hotkey, native installers
 - **AI**: Groq, Cerebras, Together AI, OpenRouter (OpenAI-compatible)
-- **Deployment**: Vercel
+- **Deployment**: Vercel (web) / Tauri bundler (desktop)
 - **Runtime**: Node.js
 
 ## Quick Start

@@ -5,14 +5,39 @@ import { Message } from '@/lib/types'
 import { MessageDisplay } from './message-display'
 import { ChatInput } from './chat-input'
 import { Sidebar } from './sidebar'
-import { Zap } from 'lucide-react'
+import { SettingsModal } from './settings-modal'
+import { Zap, Settings as SettingsIcon } from 'lucide-react'
+import { streamChat, ChatError } from '@/lib/chat-client'
+import {
+  AppSettings,
+  isTauri,
+  loadSettings,
+  saveSettings,
+  loadHistory,
+  saveHistory,
+  clearHistory,
+} from '@/lib/local-store'
 
 export function ChatWindow() {
   const [messages, setMessages] = useState<Message[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [showSidebar, setShowSidebar] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
+  const [settings, setSettings] = useState<AppSettings>({ activeProvider: null, apiKeys: {} })
+  const [desktop, setDesktop] = useState(false)
+  const [lastError, setLastError] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const [conversationId] = useState(() => `conv-${Date.now()}`)
+
+  useEffect(() => {
+    setMessages(loadHistory())
+    setSettings(loadSettings())
+    setDesktop(isTauri())
+  }, [])
+
+  useEffect(() => {
+    if (messages.length > 0) saveHistory(messages)
+  }, [messages])
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -20,10 +45,21 @@ export function ChatWindow() {
 
   useEffect(() => {
     scrollToBottom()
-  }, [messages])
+  }, [messages, isLoading])
+
+  const handleSaveSettings = (next: AppSettings) => {
+    setSettings(next)
+    saveSettings(next)
+  }
+
+  const handleClearHistory = () => {
+    setMessages([])
+    clearHistory()
+  }
 
   const handleSendMessage = async (content: string, source: 'text' | 'voice' = 'text') => {
     if (!content.trim()) return
+    setLastError(null)
 
     const userMessage: Message = {
       id: `msg-${Date.now()}`,
@@ -33,65 +69,108 @@ export function ChatWindow() {
       metadata: { source },
     }
 
-    setMessages((prev) => [...prev, userMessage])
+    const nextMessages = [...messages, userMessage]
+    setMessages(nextMessages)
     setIsLoading(true)
 
+    const aiMessageId = `msg-${Date.now()}-ai`
+    let aiContent = ''
+
+    const appendPlaceholder = () => {
+      setMessages((prev) => [
+        ...prev,
+        { id: aiMessageId, content: '', role: 'assistant', timestamp: new Date() },
+      ])
+    }
+
+    const updateAiMessage = (text: string) => {
+      aiContent += text
+      setMessages((prev) =>
+        prev.map((m) => (m.id === aiMessageId ? { ...m, content: aiContent } : m))
+      )
+    }
+
     try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: [...messages, userMessage],
-          conversationId,
-        }),
-      })
+      if (desktop) {
+        const provider = settings.activeProvider
+        const apiKey = provider ? settings.apiKeys[provider] : undefined
 
-      if (!response.ok) throw new Error('Failed to get response')
+        if (!provider || !apiKey) {
+          setIsLoading(false)
+          setShowSettings(true)
+          setLastError('Add an API key in Settings to start chatting.')
+          setMessages((prev) => prev.filter((m) => m.id !== userMessage.id))
+          return
+        }
 
-      const reader = response.body?.getReader()
-      if (!reader) throw new Error('No response stream')
+        appendPlaceholder()
+        await streamChat({
+          provider,
+          apiKey,
+          messages: nextMessages,
+          onToken: updateAiMessage,
+        })
+      } else {
+        appendPlaceholder()
+        const response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ messages: nextMessages, conversationId }),
+        })
 
-      let aiContent = ''
-      const decoder = new TextDecoder()
+        if (!response.ok) {
+          const body = await response.json().catch(() => ({}))
+          throw new ChatError(body.error || `Server error ${response.status}`, 'unknown', false)
+        }
 
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
+        const reader = response.body?.getReader()
+        if (!reader) throw new ChatError('No response stream', 'unknown', false)
 
-        const chunk = decoder.decode(value)
-        const lines = chunk.split('\n')
+        const decoder = new TextDecoder()
+        let buffer = ''
 
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+
+          buffer += decoder.decode(value, { stream: true })
+          const lines = buffer.split('\n')
+          buffer = lines.pop() || ''
+
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue
             try {
               const data = JSON.parse(line.slice(6))
-              if (data.type === 'content_block_delta' && data.delta.type === 'text_delta') {
-                aiContent += data.delta.text
+              if (data.type === 'content_block_delta' && data.delta?.type === 'text_delta') {
+                updateAiMessage(data.delta.text)
               }
             } catch {
-              // Parse error, continue
+              // skip malformed chunks
             }
           }
         }
       }
 
-      const aiMessage: Message = {
-        id: `msg-${Date.now()}-ai`,
-        content: aiContent || 'Unable to generate response',
-        role: 'assistant',
-        timestamp: new Date(),
+      if (!aiContent) {
+        setMessages((prev) => prev.filter((m) => m.id !== aiMessageId))
+        throw new ChatError('Empty response from provider', 'unknown', true)
       }
-
-      setMessages((prev) => [...prev, aiMessage])
     } catch (error) {
-      console.error('Chat error:', error)
-      const errorMessage: Message = {
-        id: `msg-${Date.now()}-error`,
-        content: '⚠️ Error communicating with Claude. Please try again.',
-        role: 'assistant',
-        timestamp: new Date(),
-      }
-      setMessages((prev) => [...prev, errorMessage])
+      setMessages((prev) => prev.filter((m) => m.id !== aiMessageId))
+      const message =
+        error instanceof ChatError
+          ? error.message
+          : 'Something went wrong. Check your connection and try again.'
+      setLastError(message)
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `msg-${Date.now()}-error`,
+          content: `⚠️ ${message}`,
+          role: 'assistant',
+          timestamp: new Date(),
+        },
+      ])
     } finally {
       setIsLoading(false)
     }
@@ -99,17 +178,23 @@ export function ChatWindow() {
 
   return (
     <div className="flex h-screen w-full">
-      {/* Sidebar */}
       <Sidebar
         isOpen={showSidebar}
         onClose={() => setShowSidebar(false)}
         messageCount={messages.length}
-        onClear={() => setMessages([])}
+        onClear={handleClearHistory}
+        onOpenSettings={() => setShowSettings(true)}
+        desktop={desktop}
       />
 
-      {/* Main Chat Area */}
+      <SettingsModal
+        isOpen={showSettings}
+        onClose={() => setShowSettings(false)}
+        settings={settings}
+        onSave={handleSaveSettings}
+      />
+
       <div className="flex-1 flex flex-col">
-        {/* Header */}
         <div className="border-b border-slate-700 bg-slate-900 px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -118,19 +203,30 @@ export function ChatWindow() {
               </div>
               <div>
                 <h1 className="adam-title">TRUE ADAM</h1>
-                <p className="adam-subtitle">AI OS • Free APIs</p>
+                <p className="adam-subtitle">
+                  {desktop ? 'Desktop' : 'Web'} • Free APIs
+                  {settings.activeProvider ? ` • ${settings.activeProvider}` : ''}
+                </p>
               </div>
             </div>
-            <button
-              onClick={() => setShowSidebar(!showSidebar)}
-              className="md:hidden p-2 hover:bg-slate-800 rounded-lg transition-colors"
-            >
-              ☰
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowSettings(true)}
+                className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
+                title="Settings"
+              >
+                <SettingsIcon className="w-5 h-5 text-slate-400" />
+              </button>
+              <button
+                onClick={() => setShowSidebar(!showSidebar)}
+                className="md:hidden p-2 hover:bg-slate-800 rounded-lg transition-colors"
+              >
+                ☰
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Messages Container */}
         <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6 space-y-4">
           {messages.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-center">
@@ -140,15 +236,12 @@ export function ChatWindow() {
                 </div>
                 <h2 className="text-3xl font-bold text-slate-100">Start chatting</h2>
                 <p className="text-slate-500 max-w-md mx-auto">
-                  Powered by Groq, Cerebras, and other free APIs. No limits, no bills.
+                  {desktop
+                    ? 'Add a free API key in Settings to get started.'
+                    : 'Powered by Groq, Cerebras, and other free APIs. No limits, no bills.'}
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-6 max-w-md mx-auto">
-                  {[
-                    'Research',
-                    'Code',
-                    'Ideas',
-                    'Explain',
-                  ].map((prompt) => (
+                  {['Research', 'Code', 'Ideas', 'Explain'].map((prompt) => (
                     <button
                       key={prompt}
                       onClick={() => handleSendMessage(`${prompt} something for me`)}
@@ -161,9 +254,7 @@ export function ChatWindow() {
               </div>
             </div>
           ) : (
-            messages.map((message) => (
-              <MessageDisplay key={message.id} message={message} />
-            ))
+            messages.map((message) => <MessageDisplay key={message.id} message={message} />)
           )}
           {isLoading && (
             <div className="flex items-center gap-2 text-slate-500">
@@ -178,7 +269,6 @@ export function ChatWindow() {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Input Area */}
         <ChatInput onSendMessage={handleSendMessage} isLoading={isLoading} />
       </div>
     </div>
